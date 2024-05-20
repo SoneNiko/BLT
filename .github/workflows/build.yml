@@ -24,8 +24,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       - name: Build
         run: ./gradlew linkReleaseExecutableMingwX64 linkReleaseExecutableLinuxX64
-      - name: Setup curl
-        uses: kordlib/setup-curl@v1.0.0
       - name: Release to gh
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
