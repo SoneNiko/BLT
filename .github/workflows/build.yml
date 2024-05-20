@@ -7,8 +7,8 @@ permissions:
   contents: write
 
 jobs:
-  publish:
-    name: Publish To Maven
+  build:
+    name: Build
     runs-on: macos-latest
     steps:
       - name: Checkout sources
