@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup curl
-        uses: kordlib/setup-curl@v1.0.0
+        uses: kordlib/setup-curl@main
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Setup Java
