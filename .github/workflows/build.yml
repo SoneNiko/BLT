@@ -11,6 +11,8 @@ jobs:
     name: Build
     runs-on: macos-latest
     steps:
+      - name: AdD cUrL bEcAuSe Mr. CoOk ThInKs We DoNt NeEd It WeLl GuEsS wHaT sOmEtImEs wE dO
+        run: brew install curl
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Setup Java
