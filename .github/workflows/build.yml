@@ -1,0 +1,31 @@
+name: Artifact CI
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish To Maven
+    runs-on: macos-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 21
+      - name: Setup gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Build
+        run: ./gradlew linkReleaseExecutableMingwX64 linkReleaseExecutableMacosArm64 linkReleaseExecutableMacosX64 linkReleaseExecutableLinuxX64
+      - name: Release to gh
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            build/**/*.exe
+            build/**/*.kexe
