@@ -1,8 +1,10 @@
 import com.fleeksoft.ksoup.Ksoup
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.types.int
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -10,12 +12,9 @@ import io.ktor.http.*
 import io.ktor.util.collections.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.io.IOException
-import kotlinx.io.Source
-import kotlinx.io.buffered
+import kotlinx.io.*
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -62,6 +61,12 @@ class Check : CliktCommand() {
         help = "The URL to traverse"
     ).convert { Url(it) }.required()
 
+    private val stopAfterRecursion by option(
+        "-s",
+        "--stop-after",
+        help = "The number of recursions to stop crawling after. Default is infinite."
+    ).int()
+
     private val ignoreRegex by option(
         "-i",
         "--ignoreRegex",
@@ -76,6 +81,21 @@ class Check : CliktCommand() {
                 "different domains. I am not planning on fixing that"
     )
 
+    private val saveToFile by option(
+        "-o",
+        "--output-file",
+        help = "The file to save for."
+    )
+
+    private val dontPrintResult by option(
+        "--dont-print-result",
+        help = "Whether to print the result to stdout"
+    ).flag()
+
+    private val prettyPrint: Boolean by option(
+        "--pretty-print",
+        help = "Whether to pretty print the json output"
+    ).flag()
 
     private val visited = ConcurrentSet<Url>()
     private val results = mutableListOf<LinkResult>()
@@ -96,11 +116,13 @@ class Check : CliktCommand() {
         return links
     }
 
-    private fun CoroutineScope.checkRecursive(currentUrl: Url, client: HttpClient): Job = launch {
-        // if visited then dont check. otherwise add it to the visited and proceed
+    private fun CoroutineScope.checkRecursive(currentUrl: Url, client: HttpClient, recursionStep: Int): Job = launch {
+
+        if (stopAfterRecursion != null && recursionStep > stopAfterRecursion!!) return@launch
+
+        // if visited then dont check. otherwise add it to the visited links list and proceed
         if (currentUrl in visited) return@launch
         visited.add(currentUrl)
-//        println("[${Thread.currentThread().name}] Checking $currentUrl")
 
         val httpResponse = try {
             client.get(currentUrl)
@@ -115,26 +137,17 @@ class Check : CliktCommand() {
         }
 
         if (httpResponse.contentType()?.withoutParameters() != ContentType.Text.Html) return@launch
-
-        results.add(
-            LinkResult(
-                currentUrl.toString(),
-                HttpStatusCode.fromValue(httpResponse.status.value).toString()
-            )
-        )
+        results.add(LinkResult(currentUrl.toString(), HttpStatusCode.fromValue(httpResponse.status.value).toString()))
 
         // if not same domain, only basic check
         if (currentUrl.host == baseUrl.host) {
             val links = filterLinks(httpResponse, currentUrl)
-            links.forEach {
-                checkRecursive(it, client)
-            }
+            links.forEach { checkRecursive(it, client, recursionStep = recursionStep + 1) }
         }
-
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    override fun run() = runBlocking(Dispatchers.Default) {
+    override fun run(): Unit = runBlocking(Dispatchers.Default) {
 
         val urls = mutableSetOf(baseUrl)
 
@@ -155,12 +168,25 @@ class Check : CliktCommand() {
         client.use {
             coroutineScope {
                 urls.forEach {
-                    checkRecursive(it, client)
+                    checkRecursive(it, client, recursionStep = 0)
                 }
             }
         }
 
-        val mapper = Json { prettyPrint = true }
-        println(mapper.encodeToString(results))
+
+        val mapper = Json { prettyPrint = this@Check.prettyPrint }
+        val resultString = mapper.encodeToString(results)
+
+        if (!dontPrintResult) {
+            println(resultString)
+        }
+
+        saveToFile?.let { filePath ->
+            val file = Path(filePath)
+
+            SystemFileSystem.sink(file).buffered().use {
+                it.writeString(resultString)
+            }
+        }
     }
 }
