@@ -33,16 +33,22 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url) =
         .map {
             if (it.host == "localhost") {
                 // if the host is localhost, the link is relative
-                URLBuilder(onlyForDomainFrom).apply {
-                    if (it.encodedPath.startsWith("/")) {
-                        parameters.clear()
-                        encodedPathSegments = it.pathSegments
-                    } else {
-                        appendEncodedPathSegments(it.pathSegments)
-                    }
-                    fragment = it.fragment
-                    parameters.appendAll(it.parameters)
-                }.build()
+                try {
+                    return@map URLBuilder(onlyForDomainFrom).apply {
+                        if (it.encodedPath.startsWith("/")) {
+                            parameters.clear()
+                            encodedPathSegments = it.pathSegments
+                        } else {
+                            appendEncodedPathSegments(it.pathSegments)
+                        }
+                        fragment = it.fragment
+                        parameters.appendAll(it.parameters)
+                    }.build()
+                } catch (exception: Exception) {
+                    println("exception parsing url.  " + exception.message)
+                    return@map Url("https://malformed-url.com")
+                }
+
             } else {
                 it
             }
