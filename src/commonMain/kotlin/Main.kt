@@ -126,7 +126,7 @@ class Check : CliktCommand() {
 
         val httpResponse = try {
             client.get(currentUrl)
-        } catch (exception: IOException) {
+        } catch (exception: Exception) {
             results.add(
                 LinkResult(
                     currentUrl.toString(),
