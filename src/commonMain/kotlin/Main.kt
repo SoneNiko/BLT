@@ -1,10 +1,11 @@
+package com.sonefall.blt
+
 import com.fleeksoft.ksoup.Ksoup
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.int
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -12,15 +13,20 @@ import io.ktor.http.*
 import io.ktor.util.collections.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.io.*
+import kotlinx.io.Source
+import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.readString
+import kotlinx.io.writeString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-data class LinkResult(val url: String, val status: String? = null, val errorMsg: String = "")
+data class LinkResult(val parent: String?, val url: String, val status: String? = null, val errorMsg: String = "")
+
+val logger by lazy { KotlinLogging.logger {} }
 
 fun main(args: Array<String>) = Check().main(args)
 
@@ -33,22 +39,16 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url) =
         .map {
             if (it.host == "localhost") {
                 // if the host is localhost, the link is relative
-                try {
-                    return@map URLBuilder(onlyForDomainFrom).apply {
-                        if (it.encodedPath.startsWith("/")) {
-                            parameters.clear()
-                            encodedPathSegments = it.pathSegments
-                        } else {
-                            appendEncodedPathSegments(it.pathSegments)
-                        }
-                        fragment = it.fragment
-                        parameters.appendAll(it.parameters)
-                    }.build()
-                } catch (exception: Exception) {
-                    println("exception parsing url.  " + exception.message)
-                    return@map Url("https://malformed-url.com")
-                }
-
+                return@map URLBuilder(onlyForDomainFrom).apply {
+                    if (it.encodedPath.startsWith("/")) {
+                        parameters.clear()
+                        encodedPathSegments = it.pathSegments
+                    } else {
+                        appendEncodedPathSegments(it.pathSegments)
+                    }
+                    fragment = it.fragment
+                    parameters.appendAll(it.parameters)
+                }.build()
             } else {
                 it
             }
@@ -93,6 +93,12 @@ class Check : CliktCommand() {
         help = "The file to save for."
     )
 
+    private val logLevel by option(
+        "-L",
+        "--log-level",
+        help = "The log level to log at"
+    ).enum<LogLevel>().default(LogLevel.INFO)
+
     private val dontPrintResult by option(
         "--dont-print-result",
         help = "Whether to print the result to stdout"
@@ -106,7 +112,7 @@ class Check : CliktCommand() {
     private val visited = ConcurrentSet<Url>()
     private val results = mutableListOf<LinkResult>()
 
-    private suspend fun filterLinks(httpResponse: HttpResponse, currentUrl: Url): Set<Url> {
+    private suspend fun filterLinks(parent: String?, httpResponse: HttpResponse, currentUrl: Url): Set<Url> {
         val document = Ksoup.parse(httpResponse.bodyAsText())
         val links = document.select("a[href]")
             .asSequence()
@@ -114,6 +120,16 @@ class Check : CliktCommand() {
                 it.attr("href")
             }
             .filter { it.isNotBlank() }
+            .filter {
+                try {
+                    Url(it)
+                    true // continue checking this expression
+                } catch (e: Exception) {
+                    logger.warn { "Failed to build Url object from: $it" }
+                    results.add(LinkResult(parent, it, errorMsg = "[${e::class.simpleName ?: ""}]: ${e.message ?: ""}"))
+                    false// add a linkresult for invalid urls
+                }
+            }
             .mapToAbsoluteUrls(currentUrl)
             .filterNot { ignoreRegex != null && it.contains(ignoreRegex!!.toRegex()) }
             .map(::Url)
@@ -122,19 +138,32 @@ class Check : CliktCommand() {
         return links
     }
 
-    private fun CoroutineScope.checkRecursive(currentUrl: Url, client: HttpClient, recursionStep: Int): Job = launch {
-
-        if (stopAfterRecursion != null && recursionStep > stopAfterRecursion!!) return@launch
+    private fun CoroutineScope.checkRecursive(
+        parent: String?,
+        currentUrl: Url,
+        client: HttpClient,
+        recursionStep: Int
+    ): Job = launch {
+        if (stopAfterRecursion != null && recursionStep > stopAfterRecursion!!) {
+            logger.debug { "Stopping after $stopAfterRecursion recursions on $currentUrl" }
+            return@launch
+        }
 
         // if visited then dont check. otherwise add it to the visited links list and proceed
-        if (currentUrl in visited) return@launch
+        if (currentUrl in visited) {
+            logger.debug { "Already visited $currentUrl. ignoring..." }
+            return@launch
+        }
         visited.add(currentUrl)
 
         val httpResponse = try {
+            logger.info { "Checking $currentUrl" }
             client.get(currentUrl)
         } catch (exception: Exception) {
+            logger.error(exception) { "Failed to get $currentUrl" }
             results.add(
                 LinkResult(
+                    parent,
                     currentUrl.toString(),
                     errorMsg = "[${exception::class.simpleName ?: ""}]: ${exception.message ?: ""}"
                 )
@@ -142,18 +171,32 @@ class Check : CliktCommand() {
             return@launch
         }
 
-        if (httpResponse.contentType()?.withoutParameters() != ContentType.Text.Html) return@launch
-        results.add(LinkResult(currentUrl.toString(), HttpStatusCode.fromValue(httpResponse.status.value).toString()))
+        if (httpResponse.contentType()?.withoutParameters() != ContentType.Text.Html) {
+            logger.debug { "Not an html page. Skipping $currentUrl" }
+            return@launch
+        }
+        results.add(
+            LinkResult(
+                parent,
+                currentUrl.toString(),
+                HttpStatusCode.fromValue(httpResponse.status.value).toString()
+            )
+        )
 
         // if not same domain, only basic check
         if (currentUrl.host == baseUrl.host) {
-            val links = filterLinks(httpResponse, currentUrl)
-            links.forEach { checkRecursive(it, client, recursionStep = recursionStep + 1) }
+            logger.debug { "Checking links in $currentUrl for recursion step $recursionStep" }
+            val links = filterLinks(parent, httpResponse, currentUrl)
+            links.forEach { checkRecursive(currentUrl.toString(), it, client, recursionStep = recursionStep + 1) }
+        } else {
+            logger.debug { "Not checking links in $currentUrl because it is not the same domain as $baseUrl" }
         }
     }
 
     @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking(Dispatchers.Default) {
+
+        configureLogging(logLevel)
 
         val urls = mutableSetOf(baseUrl)
 
@@ -174,7 +217,7 @@ class Check : CliktCommand() {
         client.use {
             coroutineScope {
                 urls.forEach {
-                    checkRecursive(it, client, recursionStep = 0)
+                    checkRecursive(null, it, client, recursionStep = 0)
                 }
             }
         }

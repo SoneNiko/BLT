@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
@@ -13,16 +14,24 @@ repositories {
 }
 
 kotlin {
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
     applyDefaultHierarchyTemplate()
     jvmToolchain(21)
     mingwX64()
-    jvm()
+    jvm {
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        mainRun {
+            mainClass = "com.sonefall.blt.MainKt"
+        }
+    }
     linuxX64()
-    macosX64()
-    macosArm64()
     targets.withType<KotlinNativeTarget> {
         binaries.executable {
             baseName = "BLT-$targetName"
+            entryPoint = "com.sonefall.blt.main"
         }
     }
 
@@ -35,6 +44,7 @@ kotlin {
                 implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
                 implementation("com.github.ajalt.clikt:clikt:4.4.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.3.5")
+                implementation("io.github.oshai:kotlin-logging:6.0.9")
 
             }
         }
@@ -47,11 +57,6 @@ kotlin {
         named("linuxMain") {
             dependencies {
                 implementation("io.ktor:ktor-client-curl:2.3.11")
-            }
-        }
-        named("appleMain") {
-            dependencies {
-                implementation("io.ktor:ktor-client-darwin:2.3.11")
             }
         }
         named("mingwMain") {
