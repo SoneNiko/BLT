@@ -25,6 +25,7 @@ web resources by identifying broken links.
 - `-i`, `--ignoreRegex`: A regex pattern to ignore specific links.
 - `-l`, `--list`: Path to a file containing additional URLs to check.
 - `-o`, `--output-file`: The file to save the results to.
+- `-L`, `--log-level`: The log level to use (default is INFO).
 - `--dont-print-result`: Suppress printing the result to stdout.
 - `--pretty-print`: Pretty print the JSON output.
 
