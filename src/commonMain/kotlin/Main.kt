@@ -32,7 +32,10 @@ fun main(args: Array<String>) = Check().main(args)
 
 private val allowedProtocols = listOf(URLProtocol.HTTP, URLProtocol.HTTPS)
 
-fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url) =
+private fun Url.isSimilarHost(other: Url) =
+    host.replace("^www\\.".toRegex(), "") == other.host.replace("^www\\.".toRegex(), "")
+
+fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url, dropFragment: Boolean = false) =
     asSequence()
         .map(::Url)
         .filter { it.protocol in allowedProtocols }
@@ -40,20 +43,25 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url) =
             if (it.host == "localhost") {
                 // if the host is localhost, the link is relative
                 return@map URLBuilder(onlyForDomainFrom).apply {
-                    if (it.encodedPath.startsWith("/")) {
+                    // encodedPath of relative url "#comment-1234" is "/", but actual path is still relative
+                    if (it.encodedPath != "/" && it.encodedPath.startsWith("/")) {
                         parameters.clear()
                         encodedPathSegments = it.pathSegments
                     } else {
                         appendEncodedPathSegments(it.pathSegments)
                     }
-                    fragment = it.fragment
+                    fragment = if (dropFragment) {
+                        ""
+                    } else {
+                        it.fragment
+                    }
                     parameters.appendAll(it.parameters)
                 }.build()
             } else {
                 it
             }
         }
-        .filter { it.host == onlyForDomainFrom.host }
+        .filter { it.isSimilarHost(onlyForDomainFrom) }
         .map(Url::toString)
 
 val client = HttpClient {
@@ -184,7 +192,7 @@ class Check : CliktCommand() {
         )
 
         // if not same domain, only basic check
-        if (currentUrl.host == baseUrl.host) {
+        if (currentUrl.host == baseUrl.host || "www." + currentUrl.host == baseUrl.host || currentUrl.host == "www." + baseUrl.host) {
             logger.debug { "Checking links in $currentUrl for recursion step $recursionStep" }
             val links = filterLinks(parent, httpResponse, currentUrl)
             links.forEach { checkRecursive(currentUrl.toString(), it, client, recursionStep = recursionStep + 1) }
