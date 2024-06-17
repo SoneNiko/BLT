@@ -61,7 +61,6 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url, dropFragment: Boo
                 it
             }
         }
-        .filter { it.isSimilarHost(onlyForDomainFrom) }
         .map(Url::toString)
 
 val client = HttpClient {
@@ -192,7 +191,7 @@ class Check : CliktCommand() {
         )
 
         // if not same domain, only basic check
-        if (currentUrl.host == baseUrl.host || "www." + currentUrl.host == baseUrl.host || currentUrl.host == "www." + baseUrl.host) {
+        if (currentUrl.isSimilarHost(baseUrl)) {
             logger.debug { "Checking links in $currentUrl for recursion step $recursionStep" }
             val links = filterLinks(parent, httpResponse, currentUrl)
             links.forEach { checkRecursive(currentUrl.toString(), it, client, recursionStep = recursionStep + 1) }
