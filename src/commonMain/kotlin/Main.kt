@@ -10,6 +10,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.util.*
 import io.ktor.util.collections.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
@@ -90,8 +91,8 @@ class Check : CliktCommand() {
         "-l",
         "--list",
         help = "path to a file with a list of urls. You still need to specify the base url. " +
-                "currently only 1 base url is allowed even though you might have multiple urls from " +
-                "different domains. I am not planning on fixing that"
+            "currently only 1 base url is allowed even though you might have multiple urls from " +
+            "different domains. I am not planning on fixing that"
     )
 
     private val saveToFile by option(
@@ -120,7 +121,18 @@ class Check : CliktCommand() {
     private val results = mutableListOf<LinkResult>()
 
     private suspend fun filterLinks(parent: String?, httpResponse: HttpResponse, currentUrl: Url): Set<Url> {
-        val document = Ksoup.parse(httpResponse.bodyAsText())
+        val body = httpResponse.bodyAsChannel().toByteArray()
+        val document = runCatching { Ksoup.parse(body.decodeToString()) }.getOrElse { error ->
+            logger.warn(error) { "Could not retrieve body of $currentUrl. Skipping ..." }
+            results.add(
+                LinkResult(
+                    parent,
+                    currentUrl.toString(),
+                    errorMsg = "[${error::class.simpleName ?: ""}]: ${error.message ?: ""}"
+                )
+            )
+            return emptySet()
+        }
         val links = document.select("a[href]")
             .asSequence()
             .map {
@@ -156,7 +168,7 @@ class Check : CliktCommand() {
             return@launch
         }
 
-        // if visited then dont check. otherwise add it to the visited links list and proceed
+        // if visited then don't check. otherwise add it to the visited links list and proceed
         if (currentUrl in visited) {
             logger.debug { "Already visited $currentUrl. ignoring..." }
             return@launch
@@ -165,7 +177,9 @@ class Check : CliktCommand() {
 
         val httpResponse = try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl)
+            client.get(currentUrl).also {
+                require(it.status.value <= 400) { "Server responded with unexpected error code: ${it.status}" }
+            }
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             results.add(
