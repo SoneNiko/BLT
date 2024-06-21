@@ -177,9 +177,7 @@ class Check : CliktCommand() {
 
         val httpResponse = try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl).also {
-                require(it.status.value <= 400) { "Server responded with unexpected error code: ${it.status}" }
-            }
+            client.get(currentUrl)
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             results.add(
