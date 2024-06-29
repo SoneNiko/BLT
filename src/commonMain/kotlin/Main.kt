@@ -5,8 +5,10 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.int
+import com.github.ajalt.clikt.parameters.types.long
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -64,11 +66,14 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url, dropFragment: Boo
         }
         .map(Url::toString)
 
-val client = HttpClient {
-    expectSuccess = false
-}
-
 class Check : CliktCommand() {
+    private val client = HttpClient {
+        expectSuccess = false
+        install(HttpTimeout) {
+            requestTimeoutMillis = requestTimeout
+        }
+    }
+
     private val baseUrl by option(
         "-u",
         "--url",
@@ -91,8 +96,8 @@ class Check : CliktCommand() {
         "-l",
         "--list",
         help = "path to a file with a list of urls. You still need to specify the base url. " +
-            "currently only 1 base url is allowed even though you might have multiple urls from " +
-            "different domains. I am not planning on fixing that"
+                "currently only 1 base url is allowed even though you might have multiple urls from " +
+                "different domains. I am not planning on fixing that"
     )
 
     private val saveToFile by option(
@@ -100,6 +105,13 @@ class Check : CliktCommand() {
         "--output-file",
         help = "The file to save for."
     )
+
+    private val requestTimeout by option(
+        "-t",
+        "--timeout",
+        help = "The timeout in milliseconds to use after which a request is to be aborted. " +
+                "Default is 10000. Setting this to 0 will be no timeout. Do that with caution"
+    ).long().default(10000)
 
     private val logLevel by option(
         "-L",
@@ -146,7 +158,7 @@ class Check : CliktCommand() {
                 } catch (e: Exception) {
                     logger.warn { "Failed to build Url object from: $it" }
                     results.add(LinkResult(parent, it, errorMsg = "[${e::class.simpleName ?: ""}]: ${e.message ?: ""}"))
-                    false// add a linkresult for invalid urls
+                    false // add a LinkResult for invalid urls
                 }
             }
             .mapToAbsoluteUrls(currentUrl)
@@ -206,13 +218,14 @@ class Check : CliktCommand() {
         if (currentUrl.isSimilarHost(baseUrl)) {
             logger.debug { "Checking links in $currentUrl for recursion step $recursionStep" }
             val links = filterLinks(parent, httpResponse, currentUrl)
-            links.forEach { checkRecursive(currentUrl.toString(), it, client, recursionStep = recursionStep + 1) }
+            links.toSet().forEach {
+                checkRecursive(currentUrl.toString(), it, client, recursionStep = recursionStep + 1)
+            }
         } else {
             logger.debug { "Not checking links in $currentUrl because it is not the same domain as $baseUrl" }
         }
     }
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun run(): Unit = runBlocking(Dispatchers.Default) {
 
         configureLogging(logLevel)
