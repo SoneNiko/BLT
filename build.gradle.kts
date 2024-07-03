@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.konan.target.HostManager
 
 plugins {
     kotlin("multiplatform") version "2.0.0"
@@ -40,29 +41,30 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("io.ktor:ktor-client-core:2.3.11")
+                implementation(project.dependencies.platform("io.ktor:ktor-bom:2.3.12"))
+                implementation("io.ktor:ktor-client-core")
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
                 implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
                 implementation("com.github.ajalt.clikt:clikt:4.4.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.4.0")
-                implementation("io.github.oshai:kotlin-logging:6.0.9")
+                implementation("io.github.oshai:kotlin-logging:7.0.0")
             }
         }
         named("jvmMain") {
             dependencies {
                 implementation("org.slf4j:slf4j-simple:2.0.13")
-                implementation("io.ktor:ktor-client-okhttp:2.3.11")
+                implementation("io.ktor:ktor-client-okhttp")
             }
         }
         named("linuxMain") {
             dependencies {
-                implementation("io.ktor:ktor-client-curl:2.3.11")
+                implementation("io.ktor:ktor-client-curl")
             }
         }
         named("mingwMain") {
             dependencies {
-                implementation("io.ktor:ktor-client-winhttp:2.3.11")
+                implementation("io.ktor:ktor-client-winhttp")
             }
         }
     }
