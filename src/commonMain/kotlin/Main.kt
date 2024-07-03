@@ -69,9 +69,7 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url, dropFragment: Boo
 class Check : CliktCommand() {
     private val client = HttpClient {
         expectSuccess = false
-        install(HttpTimeout) {
-            requestTimeoutMillis = requestTimeout
-        }
+        install(HttpTimeout)
     }
 
     private val baseUrl by option(
@@ -189,7 +187,11 @@ class Check : CliktCommand() {
 
         val httpResponse = try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl)
+            client.get(currentUrl) {
+                timeout {
+                    requestTimeoutMillis = requestTimeout
+                }
+            }
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             results.add(
