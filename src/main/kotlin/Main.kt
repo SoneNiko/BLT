@@ -25,13 +25,14 @@ import kotlinx.io.writeString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.slf4j.event.Level
 
 @Serializable
 data class LinkResult(val parent: String?, val url: String, val status: String? = null, val errorMsg: String = "")
 
 val logger by lazy { KotlinLogging.logger {} }
 
-fun main(args: Array<String>) = Check().main(args)
+fun main(args: Array<String>) = BLT().main(args)
 
 private val allowedProtocols = listOf(URLProtocol.HTTP, URLProtocol.HTTPS)
 
@@ -66,7 +67,7 @@ fun Sequence<String>.mapToAbsoluteUrls(onlyForDomainFrom: Url, dropFragment: Boo
         }
         .map(Url::toString)
 
-class Check : CliktCommand() {
+class BLT : CliktCommand() {
     private val client = HttpClient {
         expectSuccess = false
         install(HttpTimeout)
@@ -115,7 +116,7 @@ class Check : CliktCommand() {
         "-L",
         "--log-level",
         help = "The log level to log at"
-    ).enum<LogLevel>().default(LogLevel.INFO)
+    ).enum<Level>().default(Level.INFO)
 
     private val dontPrintResult by option(
         "--dont-print-result",
@@ -229,8 +230,7 @@ class Check : CliktCommand() {
     }
 
     override fun run(): Unit = runBlocking(Dispatchers.Default) {
-
-        configureLogging(logLevel)
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", logLevel.toString())
 
         val urls = mutableSetOf(baseUrl)
 
@@ -257,7 +257,7 @@ class Check : CliktCommand() {
         }
 
 
-        val mapper = Json { prettyPrint = this@Check.prettyPrint }
+        val mapper = Json { prettyPrint = this@BLT.prettyPrint }
         val resultString = mapper.encodeToString(results)
 
         if (!dontPrintResult) {

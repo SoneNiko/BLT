@@ -4,15 +4,13 @@ on:
   push:
 
 permissions:
-  contents: write
+  contents: writeh
 
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Setup curl
-        uses: kordlib/setup-curl@v1
       - name: Checkout sources
         uses: actions/checkout@v4
       - name: Setup Java
@@ -23,11 +21,13 @@ jobs:
       - name: Setup gradle
         uses: gradle/actions/setup-gradle@v3
       - name: Build
-        run: ./gradlew linkReleaseExecutableMingwX64 linkReleaseExecutableLinuxX64
+        run: ./gradlew installDist
+      - uses: montudor/action-zip@v1
+        with:
+          args: zip -qq -r BLT.zip build/install/BLT
       - name: Release to gh
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            build/**/*.exe
-            build/**/*.kexe
+            BLT.zip
