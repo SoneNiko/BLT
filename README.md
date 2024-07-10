@@ -32,7 +32,7 @@ web resources by identifying broken links.
 ### Example
 
 ```sh
-blt.kexe -u https://example.com -s 3 -i "ignore-this-pattern" -l urls.txt -o results.json --pretty-print
+blt -u https://example.com -s 3 -i "ignore-this-pattern" -l urls.txt -o results.json --pretty-print
 ```
 
 ### Sample Output
@@ -40,13 +40,13 @@ blt.kexe -u https://example.com -s 3 -i "ignore-this-pattern" -l urls.txt -o res
 ```json
 [
   {
+    "parent": null,
     "url": "https://example.com",
-    "status": "200 OK",
-    "errorMsg": ""
+    "status": "200 OK"
   },
   {
+    "parent": "https://example.com",
     "url": "https://example.com/broken-link",
-    "status": null,
     "errorMsg": "[IOException]: Connection refused"
   }
 ]
