@@ -105,13 +105,6 @@ class BLT : CliktCommand() {
         help = "The file to save for."
     )
 
-    private val requestTimeout by option(
-        "-t",
-        "--timeout",
-        help = "The timeout in milliseconds to use after which a request is to be aborted. " +
-                "Default is 10000. Setting this to 0 will be no timeout. Do that with caution"
-    ).long().default(10000)
-
     private val logLevel by option(
         "-L",
         "--log-level",
@@ -188,11 +181,7 @@ class BLT : CliktCommand() {
 
         val httpResponse = try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl) {
-                timeout {
-                    requestTimeoutMillis = requestTimeout
-                }
-            }
+            client.get(currentUrl)
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             results.add(
