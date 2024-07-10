@@ -26,5 +26,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.sonefall.blt.MainKt")
+    mainClass = "com.sonefall.blt.MainKt"
 }
