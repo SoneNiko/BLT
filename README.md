@@ -54,7 +54,7 @@ blt -u https://example.com -s 3 -i "ignore-this-pattern" -l urls.txt -o results.
 
 ## Installation
 
-1. Download the latest version of the BLOT from the releases page.
+1. Download the latest version of the BLT from the releases page.
 2. Run the tool using the command line as shown in the usage section.
 
 ## Notes
