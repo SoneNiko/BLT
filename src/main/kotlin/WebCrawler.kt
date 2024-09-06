@@ -111,7 +111,7 @@ object WebCrawler {
         command: BLT, parent: String?, currentUrl: Url, recursionStep: Int
     ): Job = launch {
         if (shouldStopRecursion(command, recursionStep, currentUrl)) return@launch
-        if (alreadyVisitedOrCrawled(currentUrl, parent)) return@launch
+        if (alreadyVisitedOrCrawled(currentUrl)) return@launch
 
         val httpResponse = fetchUrl(currentUrl, parent) ?: return@launch
         handleResponse(command, parent, currentUrl, httpResponse, recursionStep)
@@ -125,7 +125,7 @@ object WebCrawler {
         return false
     }
 
-    private fun alreadyVisitedOrCrawled(currentUrl: Url, parent: String?): Boolean {
+    private fun alreadyVisitedOrCrawled(currentUrl: Url): Boolean {
         if (currentUrl in crawled || currentUrl in visited) {
             logger.debug { "Already visited/crawled $currentUrl. ignoring..." }
             return true
