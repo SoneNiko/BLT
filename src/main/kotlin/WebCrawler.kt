@@ -19,7 +19,6 @@ import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 
-// Data class to store the result of each crawled link
 @Serializable
 data class LinkResult(
     val parent: String?,
@@ -29,7 +28,6 @@ data class LinkResult(
     val redirect: String? = null
 )
 
-// Supported protocols for crawling
 private val allowedProtocols = listOf(URLProtocol.HTTP, URLProtocol.HTTPS)
 
 object WebCrawler {
@@ -73,7 +71,6 @@ object WebCrawler {
         }
     }
 
-    // Extract links from an HTTP response
     private suspend fun findLinksInHttpResponse(
         command: BLT, parent: String?, httpResponse: HttpResponse, currentUrl: Url
     ): Set<Url> {
@@ -106,7 +103,6 @@ object WebCrawler {
 
     private suspend fun addResult(linkResult: LinkResult) = resultsMutex.withLock { results.add(linkResult) }
 
-    // Recursively check links
     private fun CoroutineScope.checkRecursive(
         command: BLT, parent: String?, currentUrl: Url, recursionStep: Int
     ): Job = launch {
@@ -201,7 +197,6 @@ object WebCrawler {
         }
     }
 
-    // Crawl starting URLs
     suspend fun crawl(command: BLT): MutableList<LinkResult> {
         val urls = mutableSetOf(command.baseUrl)
 
