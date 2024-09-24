@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "2.0.0"
     kotlin("plugin.serialization") version "2.0.0"
     application
+    `jvm-test-suite`
 }
 
 group = "com.sonefall"
@@ -23,9 +24,19 @@ dependencies {
     implementation("io.github.oshai:kotlin-logging:7.0.0")
     implementation("ch.qos.logback:logback-classic:1.5.6")
 
-    testImplementation(kotlin("test"))
+    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC.2")
+    testImplementation(kotlin("test-junit5"))
 }
 
 application {
     mainClass = "com.sonefall.blt.MainKt"
+}
+
+testing {
+    suites {
+        named<JvmTestSuite>("test") {
+            useJUnitJupiter()
+        }
+    }
 }

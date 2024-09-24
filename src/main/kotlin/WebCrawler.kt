@@ -41,10 +41,10 @@ object WebCrawler {
     private val results = mutableListOf<LinkResult>()
     private val resultsMutex = Mutex()
 
-    private fun Url.isSimilarHost(other: Url) =
+    fun Url.isSimilarHost(other: Url) =
         host.replace("^www\\.".toRegex(), "") == other.host.replace("^www\\.".toRegex(), "")
 
-    private fun Sequence<String>.mapToAbsoluteUrls(
+    fun Sequence<String>.mapToAbsoluteUrls(
         onlyForDomainFrom: Url,
         dropFragment: Boolean = false,
         allowedProtocols: List<URLProtocol>
@@ -54,7 +54,7 @@ object WebCrawler {
         .map { buildAbsoluteUrl(it, onlyForDomainFrom, dropFragment) }
         .map(Url::toString)
 
-    private fun buildAbsoluteUrl(relativeUrl: Url, baseUrl: Url, dropFragment: Boolean): Url {
+    fun buildAbsoluteUrl(relativeUrl: Url, baseUrl: Url, dropFragment: Boolean): Url {
         return if (relativeUrl.host == "localhost") {
             URLBuilder(baseUrl).apply {
                 if (relativeUrl.encodedPath != "/" && relativeUrl.encodedPath.startsWith("/")) {
@@ -71,7 +71,7 @@ object WebCrawler {
         }
     }
 
-    private suspend fun findLinksInHttpResponse(
+    suspend fun findLinksInHttpResponse(
         command: BLT, parent: String?, httpResponse: HttpResponse, currentUrl: Url
     ): Set<Url> {
         val body = httpResponse.bodyAsChannel().toByteArray()
