@@ -71,7 +71,7 @@ object WebCrawler {
         }
     }
 
-    suspend fun findLinksInHttpResponse(
+    private suspend fun findLinksInHttpResponse(
         command: BLT, parent: String?, httpResponse: HttpResponse, currentUrl: Url
     ): Set<Url> {
         val body = httpResponse.bodyAsChannel().toByteArray()
