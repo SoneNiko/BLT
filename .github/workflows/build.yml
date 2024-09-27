@@ -6,6 +6,10 @@ on:
 permissions:
   contents: write
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build:
     name: Build
