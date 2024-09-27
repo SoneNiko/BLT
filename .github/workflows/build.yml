@@ -29,9 +29,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       - name: Build
         run: ./gradlew installDist
-      - uses: montudor/action-zip@v1
-        with:
-          args: zip -qq -r BLT.zip build/install/BLT
+      - run: zip -qq -r BLT.zip build/install/BLT
       - name: Release to gh
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
