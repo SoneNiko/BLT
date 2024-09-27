@@ -2,6 +2,9 @@
 package com.sonefall.blt
 
 import com.fleeksoft.ksoup.Ksoup
+import com.github.alturkovic.robots.txt.MatchedGrant
+import com.github.alturkovic.robots.txt.NonMatchedAllowedGrant
+import com.github.alturkovic.robots.txt.RobotsTxtReader
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -18,6 +21,15 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import java.io.ByteArrayInputStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
+
+private val LoomDispatcher = Executors.newVirtualThreadPerTaskExecutor().asCoroutineDispatcher()
+
+suspend fun <T> blocking(block: suspend CoroutineScope.() -> T) = withContext(LoomDispatcher, block)
 
 @Serializable
 data class LinkResult(
@@ -35,9 +47,14 @@ object WebCrawler {
         expectSuccess = false
         followRedirects = false
     }
+    private val redirectFollowingClient = HttpClient {
+        expectSuccess = false
+        followRedirects = true
+    }
 
     private val visited = ConcurrentSet<Url>()
     private val crawled = ConcurrentSet<Url>()
+    private val robotsFiles = ConcurrentMap<String, String>()
     private val results = mutableListOf<LinkResult>()
     private val resultsMutex = Mutex()
 
@@ -108,6 +125,7 @@ object WebCrawler {
     ): Job = launch {
         if (shouldStopRecursion(command, recursionStep, currentUrl)) return@launch
         if (alreadyVisitedOrCrawled(currentUrl)) return@launch
+        if (isRobotsExcluded(currentUrl)) return@launch
 
         val httpResponse = fetchUrl(currentUrl, parent) ?: return@launch
         handleResponse(command, parent, currentUrl, httpResponse, recursionStep)
@@ -128,6 +146,32 @@ object WebCrawler {
         }
         visited.add(currentUrl)
         return false
+    }
+
+    private suspend fun isRobotsExcluded(currentUrl: Url): Boolean {
+        val robotsFile: String = robotsFiles.getOrPut(currentUrl.host) { fetchMissingRobotsFile(currentUrl) }
+
+        val parsedRobotsFile = blocking { RobotsTxtReader.read(ByteArrayInputStream(robotsFile.toByteArray())) }
+        val grant = parsedRobotsFile.query("BLT", currentUrl.encodedPathAndQuery)
+
+        return !grant.allowed
+    }
+
+    private suspend fun fetchMissingRobotsFile(currentUrl: Url): String {
+        val httpResponse = redirectFollowingClient.get(currentUrl) {
+            url {
+                path("robots.txt")
+            }
+        }
+        val status = httpResponse.status.value
+
+        return if (status in 500..599 || (status in 400..499 && status != 404)) {
+            // if there is any failure indicating code that is not a 404 we assume that we are not allowed to crawl
+            """User-agent: *
+                |Disallow: /""".trimMargin()
+        } else {
+            httpResponse.bodyAsText()
+        }
     }
 
     private suspend fun fetchUrl(currentUrl: Url, parent: String?): HttpResponse? {

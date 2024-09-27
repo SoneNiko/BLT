@@ -10,6 +10,7 @@ version = "2.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -23,6 +24,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.4.0")
     implementation("io.github.oshai:kotlin-logging:7.0.0")
     implementation("ch.qos.logback:logback-classic:1.5.6")
+    implementation("com.github.alturkovic:robots-txt:1.0.1")
 
     testImplementation("io.mockk:mockk:1.13.12")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0-RC.2")
