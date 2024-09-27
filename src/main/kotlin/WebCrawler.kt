@@ -43,9 +43,11 @@ data class LinkResult(
 private val allowedProtocols = listOf(URLProtocol.HTTP, URLProtocol.HTTPS)
 
 object WebCrawler {
-    private val client = HttpClient {
-        expectSuccess = false
-        followRedirects = false
+    private val client by lazy {
+            HttpClient {
+            expectSuccess = false
+            followRedirects = false
+        }
     }
     private val redirectFollowingClient = HttpClient {
         expectSuccess = false
@@ -127,7 +129,7 @@ object WebCrawler {
         if (alreadyVisitedOrCrawled(currentUrl)) return@launch
         if (isRobotsExcluded(currentUrl)) return@launch
 
-        val httpResponse = fetchUrl(currentUrl, parent) ?: return@launch
+        val httpResponse = fetchUrl(currentUrl, parent, command) ?: return@launch
         handleResponse(command, parent, currentUrl, httpResponse, recursionStep)
     }
 
@@ -173,11 +175,11 @@ object WebCrawler {
             httpResponse.bodyAsText()
         }
     }
-
-    private suspend fun fetchUrl(currentUrl: Url, parent: String?): HttpResponse? {
+    
+    private suspend fun fetchUrl(currentUrl: Url, parent: String?, command: BLT): HttpResponse? {
         return try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl)
+            client.get(currentUrl) { headers { userAgent(command.userAgent ?: "Ktor client") } }
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             addResultError(currentUrl, parent, exception)

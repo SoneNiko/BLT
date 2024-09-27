@@ -20,14 +20,27 @@ web resources by identifying broken links.
 
 ### Command Line Options
 
-- `-u`, `--url` (required): The base URL to start traversing from.
-- `-s`, `--stop-after`: The number of recursion levels to stop crawling after (default is infinite).
-- `-i`, `--ignoreRegex`: A regex pattern to ignore specific links.
-- `-l`, `--list`: Path to a file containing additional URLs to check.
-- `-o`, `--output-file`: The file to save the results to.
-- `-L`, `--log-level`: The log level to use (default is INFO).
-- `--dont-print-result`: Suppress printing the result to stdout.
-- `--pretty-print`: Pretty print the JSON output.
+```
+Usage: blt [<options>]
+
+Options:
+  -u, --url=<value>         The URL to traverse
+  -s, --stop-after=<int>    The number of recursions to stop crawling after.
+                            Default is infinite.
+  -i, --ignoreRegex=<text>  The Regex for ignoring
+  -l, --list=<text>         path to a file with a list of urls. You still need
+                            to specify the base url. currently only 1 base url
+                            is allowed even though you might have multiple urls
+                            from different domains. I am not planning on fixing
+                            that
+  -o, --output-file=<text>  The file to save for.
+  -L, --log-level=(ERROR|WARN|INFO|DEBUG|TRACE)
+                            The log level to log at
+  --dont-print-result       Whether to print the result to stdout
+  --pretty-print            Whether to pretty print the json output
+  -U, --user-agent=<text>   The user agent to use when crawling
+  -h, --help                Show this message and exit
+```
 
 ### Example
 
