@@ -80,6 +80,10 @@ blt -u https://example.com -s 3 -i "ignore-this-pattern" -l urls.txt -o results.
 
 This project is licensed under the MIT License.
 
+## Credits
+
+- @alturkovic who made https://github.com/alturkovic/robots-txt
+
 ---
 
 > [!CAUTION]
