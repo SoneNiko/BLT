@@ -84,9 +84,3 @@ This project is licensed under the MIT License.
 
 - [@alturkovic](https://github.com/alturkovic) who made https://github.com/alturkovic/robots-txt
 
----
-
-> [!CAUTION]
-> This tool ignores `robots.txt` files. User discretion is advised. There will be no liability from the author if the
-> wrongful usage of this CLI tool on infrastructure, and links on that infrastructure that you don't have the permission
-> to crawl, causes harm, a lawsuit, or an international incident. Use responsibly.
