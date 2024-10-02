@@ -33,8 +33,6 @@ import org.slf4j.event.Level
 import ch.qos.logback.classic.Level as LogbackLevel
 import org.slf4j.Logger as SLF4JLogger
 
-
-
 val logger by lazy { KotlinLogging.logger {} }
 
 fun main(args: Array<String>) = BLT().main(args)

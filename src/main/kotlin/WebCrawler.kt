@@ -1,10 +1,8 @@
-@file:UseSerializers(HttpStatusCodeSerializer::class)
 package com.sonefall.blt
 
 import com.fleeksoft.ksoup.Ksoup
-import com.github.alturkovic.robots.txt.MatchedGrant
-import com.github.alturkovic.robots.txt.NonMatchedAllowedGrant
 import com.github.alturkovic.robots.txt.RobotsTxtReader
+import com.sonefall.blt.WebCrawler.buildAbsoluteUrl
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -19,36 +17,30 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
 import java.io.ByteArrayInputStream
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.withContext
-import java.util.concurrent.Executors
 
-private val LoomDispatcher = Executors.newVirtualThreadPerTaskExecutor().asCoroutineDispatcher()
+fun Url.isSimilarHost(other: Url) =
+    host.replace("^www\\.".toRegex(), "") == other.host.replace("^www\\.".toRegex(), "")
 
-suspend fun <T> blocking(block: suspend CoroutineScope.() -> T) = withContext(LoomDispatcher, block)
-
-@Serializable
-data class LinkResult(
-    val parent: String?,
-    val url: String,
-    val status: HttpStatusCode? = null,
-    val errorMsg: String? = null,
-    val redirect: String? = null
-)
+fun Sequence<String>.mapToAbsoluteUrls(
+    onlyForDomainFrom: Url,
+    dropFragment: Boolean = false,
+    allowedProtocols: List<URLProtocol>
+) = asSequence()
+    .map(::Url)
+    .filter { it.protocol in allowedProtocols }
+    .map { buildAbsoluteUrl(it, onlyForDomainFrom, dropFragment) }
+    .map(Url::toString)
 
 private val allowedProtocols = listOf(URLProtocol.HTTP, URLProtocol.HTTPS)
 
 object WebCrawler {
-    private val client by lazy {
-            HttpClient {
-            expectSuccess = false
-            followRedirects = false
-        }
+    private val client = HttpClient {
+        expectSuccess = false
+        followRedirects = false
     }
+
     private val redirectFollowingClient = HttpClient {
         expectSuccess = false
         followRedirects = true
@@ -60,18 +52,34 @@ object WebCrawler {
     private val results = mutableListOf<LinkResult>()
     private val resultsMutex = Mutex()
 
-    fun Url.isSimilarHost(other: Url) =
-        host.replace("^www\\.".toRegex(), "") == other.host.replace("^www\\.".toRegex(), "")
+    suspend fun crawl(command: BLT): MutableList<LinkResult> {
+        val urls = mutableSetOf(command.baseUrl)
 
-    fun Sequence<String>.mapToAbsoluteUrls(
-        onlyForDomainFrom: Url,
-        dropFragment: Boolean = false,
-        allowedProtocols: List<URLProtocol>
-    ) = asSequence()
-        .map(::Url)
-        .filter { it.protocol in allowedProtocols }
-        .map { buildAbsoluteUrl(it, onlyForDomainFrom, dropFragment) }
-        .map(Url::toString)
+        command.urlList?.let {
+            val file = Path(it)
+            if (!SystemFileSystem.exists(file)) error("URL list file not found")
+            urls.addAll(readUrlsFromFile(file))
+        }
+
+        client.use {
+            coroutineScope {
+                urls.forEach { checkRecursive(command, null, it, 0) }
+            }
+        }
+
+        return results
+    }
+
+    private fun CoroutineScope.checkRecursive(
+        command: BLT, parent: String?, currentUrl: Url, recursionStep: Int
+    ): Job = launch {
+        if (shouldStopRecursion(command, recursionStep, currentUrl)) return@launch
+        if (alreadyVisitedOrCrawled(currentUrl)) return@launch
+        if (isRobotsExcluded(currentUrl)) return@launch
+
+        val httpResponse = fetchUrl(currentUrl, parent, command) ?: return@launch
+        handleResponse(command, parent, currentUrl, httpResponse, recursionStep)
+    }
 
     fun buildAbsoluteUrl(relativeUrl: Url, baseUrl: Url, dropFragment: Boolean): Url {
         return if (relativeUrl.host == "localhost") {
@@ -121,17 +129,6 @@ object WebCrawler {
     }
 
     private suspend fun addResult(linkResult: LinkResult) = resultsMutex.withLock { results.add(linkResult) }
-
-    private fun CoroutineScope.checkRecursive(
-        command: BLT, parent: String?, currentUrl: Url, recursionStep: Int
-    ): Job = launch {
-        if (shouldStopRecursion(command, recursionStep, currentUrl)) return@launch
-        if (alreadyVisitedOrCrawled(currentUrl)) return@launch
-        if (isRobotsExcluded(currentUrl)) return@launch
-
-        val httpResponse = fetchUrl(currentUrl, parent, command) ?: return@launch
-        handleResponse(command, parent, currentUrl, httpResponse, recursionStep)
-    }
 
     private fun shouldStopRecursion(command: BLT, recursionStep: Int, currentUrl: Url): Boolean {
         if (command.stopAfterRecursion != null && recursionStep > command.stopAfterRecursion!!) {
@@ -241,24 +238,6 @@ object WebCrawler {
                 }
             }
         }
-    }
-
-    suspend fun crawl(command: BLT): MutableList<LinkResult> {
-        val urls = mutableSetOf(command.baseUrl)
-
-        command.urlList?.let {
-            val file = Path(it)
-            if (!SystemFileSystem.exists(file)) error("URL list file not found")
-            urls.addAll(readUrlsFromFile(file))
-        }
-
-        client.use {
-            coroutineScope {
-                urls.forEach { checkRecursive(command, null, it, 0) }
-            }
-        }
-
-        return results
     }
 
     private fun readUrlsFromFile(file: Path): List<Url> {
