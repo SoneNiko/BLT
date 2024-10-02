@@ -82,7 +82,7 @@ This project is licensed under the MIT License.
 
 ## Credits
 
-- @alturkovic who made https://github.com/alturkovic/robots-txt
+- [@alturkovic](https://github.com/alturkovic) who made https://github.com/alturkovic/robots-txt
 
 ---
 
