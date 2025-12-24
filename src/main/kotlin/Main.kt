@@ -74,10 +74,6 @@ class BLT : CliktCommand() {
         "--pretty-print", help = "Whether to pretty print the json output"
     ).flag()
 
-    val userAgent by option(
-        "-U", "--user-agent", help = "The user agent to use when crawling"
-    )
-
     override fun run(): Unit = runBlocking(Dispatchers.Default) {
         (LoggerFactory.getLogger(SLF4JLogger.ROOT_LOGGER_NAME) as Logger).level =
             LogbackLevel.convertAnSLF4JLevel(logLevel)

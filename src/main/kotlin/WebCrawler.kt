@@ -176,7 +176,7 @@ object WebCrawler {
     private suspend fun fetchUrl(currentUrl: Url, parent: String?, command: BLT): HttpResponse? {
         return try {
             logger.info { "Checking $currentUrl" }
-            client.get(currentUrl) { headers { userAgent(command.userAgent ?: "Ktor client") } }
+            client.get(currentUrl) { headers { userAgent("BLT") } }
         } catch (exception: Exception) {
             logger.error(exception) { "Failed to get $currentUrl" }
             addResultError(currentUrl, parent, exception)
