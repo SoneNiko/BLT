@@ -18,7 +18,7 @@ dependencies {
     implementation("io.ktor:ktor-client-core")
     implementation("io.ktor:ktor-client-okhttp")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
     implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
     implementation("com.github.ajalt.clikt:clikt-jvm:4.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.4.0")
