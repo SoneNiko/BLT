@@ -24,7 +24,7 @@ jobs:
           distribution: 'temurin'
           java-version: 21
       - name: Setup gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v5
       - name: Build
         run: ./gradlew installDist
       - run: zip -qq -r BLT.zip build/install/BLT
