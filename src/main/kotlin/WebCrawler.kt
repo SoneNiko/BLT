@@ -7,8 +7,6 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.util.*
-import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -18,7 +16,8 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 import java.io.ByteArrayInputStream
-import kotlinx.coroutines.CoroutineScope
+import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 
 fun Url.isSimilarHost(other: Url) =
     host.replace("^www\\.".toRegex(), "") == other.host.replace("^www\\.".toRegex(), "")
@@ -46,9 +45,9 @@ object WebCrawler {
         followRedirects = true
     }
 
-    private val visited = ConcurrentSet<Url>()
-    private val crawled = ConcurrentSet<Url>()
-    private val robotsFiles = ConcurrentMap<String, String>()
+    private val visited: MutableSet<Url> = Collections.newSetFromMap(ConcurrentHashMap())
+    private val crawled: MutableSet<Url> = Collections.newSetFromMap(ConcurrentHashMap())
+    private val robotsFiles: ConcurrentHashMap<String, String> = ConcurrentHashMap()
     private val results = mutableListOf<LinkResult>()
     private val resultsMutex = Mutex()
 
@@ -101,7 +100,7 @@ object WebCrawler {
     private suspend fun findLinksInHttpResponse(
         command: BLT, parent: String?, httpResponse: HttpResponse, currentUrl: Url
     ): Set<Url> {
-        val body = httpResponse.bodyAsChannel().toByteArray()
+        val body = httpResponse.bodyAsBytes()
         val document = runCatching { Ksoup.parse(body.decodeToString()) }.getOrElse { error ->
             addResultError(currentUrl, parent, error)
             return emptySet()
@@ -150,7 +149,7 @@ object WebCrawler {
     private suspend fun isRobotsExcluded(currentUrl: Url): Boolean {
         val robotsFile: String = robotsFiles.getOrPut(currentUrl.host) { fetchMissingRobotsFile(currentUrl) }
 
-        val parsedRobotsFile = blocking { RobotsTxtReader.read(ByteArrayInputStream(robotsFile.toByteArray())) }
+        val parsedRobotsFile = withContext(Dispatchers.IO) { RobotsTxtReader.read(ByteArrayInputStream(robotsFile.toByteArray())) }
         val grant = parsedRobotsFile.query("BLT", currentUrl.encodedPathAndQuery)
 
         return !grant.allowed
@@ -172,7 +171,7 @@ object WebCrawler {
             httpResponse.bodyAsText()
         }
     }
-    
+
     private suspend fun fetchUrl(currentUrl: Url, parent: String?, command: BLT): HttpResponse? {
         return try {
             logger.info { "Checking $currentUrl" }

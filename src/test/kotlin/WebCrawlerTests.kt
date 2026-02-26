@@ -1,7 +1,7 @@
 import com.sonefall.blt.BLT
 import com.sonefall.blt.WebCrawler
-import com.sonefall.blt.WebCrawler.isSimilarHost
-import com.sonefall.blt.WebCrawler.mapToAbsoluteUrls
+import com.sonefall.blt.isSimilarHost
+import com.sonefall.blt.mapToAbsoluteUrls
 import io.ktor.http.*
 import io.mockk.every
 import io.mockk.mockk

@@ -2,8 +2,8 @@
 package com.sonefall.blt
 
 import ch.qos.logback.classic.Logger
-import com.fleeksoft.ksoup.Ksoup
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.int
@@ -12,12 +12,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.util.*
-import io.ktor.util.collections.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.io.Source
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
