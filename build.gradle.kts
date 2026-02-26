@@ -26,7 +26,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.32")
     implementation("com.github.alturkovic:robots-txt:1.0.1")
 
-    testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     testImplementation(kotlin("test-junit5"))
 }
