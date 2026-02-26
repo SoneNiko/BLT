@@ -23,7 +23,7 @@ dependencies {
     implementation("com.github.ajalt.clikt:clikt-jvm:4.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.4.0")
     implementation("io.github.oshai:kotlin-logging:7.0.0")
-    implementation("ch.qos.logback:logback-classic:1.5.6")
+    implementation("ch.qos.logback:logback-classic:1.5.32")
     implementation("com.github.alturkovic:robots-txt:1.0.1")
 
     testImplementation("io.mockk:mockk:1.13.12")
