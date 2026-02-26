@@ -29,7 +29,7 @@ jobs:
         run: ./gradlew installDist
       - run: zip -qq -r BLT.zip build/install/BLT
       - name: Release to gh
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
