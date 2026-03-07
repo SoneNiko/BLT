@@ -19,7 +19,7 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
-    implementation("com.fleeksoft.ksoup:ksoup:0.1.2")
+    implementation("com.fleeksoft.ksoup:ksoup:0.2.6")
     implementation("com.github.ajalt.clikt:clikt-jvm:5.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.9.0")
     implementation("io.github.oshai:kotlin-logging:8.0.01")
