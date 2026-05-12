@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("io.ktor:ktor-bom:3.4.1"))
+    implementation(platform("io.ktor:ktor-bom:3.4.3"))
     implementation("io.ktor:ktor-client-core")
     implementation("io.ktor:ktor-client-okhttp")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
