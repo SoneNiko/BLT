@@ -22,7 +22,7 @@ dependencies {
     implementation("com.fleeksoft.ksoup:ksoup:0.2.6")
     implementation("com.github.ajalt.clikt:clikt-jvm:5.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.9.0")
-    implementation("io.github.oshai:kotlin-logging:8.0.02")
+    implementation("io.github.oshai:kotlin-logging:8.0.4")
     implementation("ch.qos.logback:logback-classic:1.5.32")
     implementation("com.github.alturkovic:robots-txt:1.0.1")
 
